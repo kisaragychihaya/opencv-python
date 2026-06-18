@@ -23,16 +23,8 @@ def main():
     build_rolling = get_build_env_var_by_name("rolling")
 
     install_requires = [
-        'numpy>=1.13.3; python_version<"3.7"',
-        'numpy>=1.17.0; python_version>="3.7"', # https://github.com/numpy/numpy/pull/13725
-        'numpy>=1.17.3; python_version>="3.8"',
-        'numpy>=1.19.3; python_version>="3.9"',
-        'numpy>=1.21.2; python_version>="3.10"',
-        'numpy>=1.19.3; python_version>="3.6" and platform_system=="Linux" and platform_machine=="aarch64"',
-        'numpy>=1.21.0; python_version<="3.9" and platform_system=="Darwin" and platform_machine=="arm64"',
-        'numpy>=1.21.4; python_version>="3.10" and platform_system=="Darwin"',
-        "numpy>=1.23.5; python_version>='3.11'",
-        "numpy>=1.26.0; python_version>='3.12'"
+        'numpy<2.0; python_version<"3.9"',
+        'numpy>=2; python_version>="3.9"',
     ]
 
     python_version = cmaker.CMaker.get_python_version()
@@ -48,7 +40,7 @@ def main():
         "\\", "/"
     )
 
-    if os.path.exists(".git"):
+    if not bool(os.environ.get('OPENCV_PYTHON_SKIP_GIT_COMMANDS', False)) and os.path.exists(".git"):
         import pip._internal.vcs.git as git
 
         g = git.Git()  # NOTE: pip API's are internal, this has to be refactored
@@ -95,6 +87,8 @@ def main():
     if build_rolling:
         package_name += "-rolling"
 
+    package_name = os.environ.get('OPENCV_PYTHON_PACKAGE_NAME', package_name)
+
     long_description = io.open("README.md", encoding="utf-8").read()
 
     packages = ["cv2", "cv2.data"]
@@ -114,17 +108,14 @@ def main():
             else []
         )
         +
-        (
-            [r"lib/libOrbbecSDK.dylib", r"lib/libOrbbecSDK.\d.\d.dylib", r"lib/libOrbbecSDK.\d.\d.\d.dylib"]
-            if platform.system() == "Darwin" and platform.machine() == "arm64"
-            else []
-        )
-        +
         # In Windows, in python/X.Y/<arch>/; in Linux, in just python/X.Y/.
         # Naming conventions vary so widely between versions and OSes
         # had to give up on checking them.
+        # If not specifying PY_LIMITED_API, the Python sources go under python/cv2/python-3.MINOR_VERSION/ instead of python/cv2/python-3/
         [
-            r"python/cv2/python-%s/cv2.*"
+            r"python/cv2/python-%s*/cv2.*"
+            % (sys.version_info[0]) if 'CMAKE_ARGS' in os.environ and "-DPYTHON3_LIMITED_API=ON" in os.environ['CMAKE_ARGS']
+            else r"python/cv2/python-%s.*/cv2.*"
             % (sys.version_info[0])
         ]
         +
@@ -157,27 +148,10 @@ def main():
     files_outside_package_dir = {"cv2": ["LICENSE.txt", "LICENSE-3RD-PARTY.txt"]}
 
     ci_cmake_generator = (
-        ["-G", "Visual Studio 16"]
+        ["-G", "Visual Studio 17 2022"]
         if os.name == "nt"
         else ["-G", "Unix Makefiles"]
     )
-
-    generator_variant = []
-    if os.name == "nt":
-        if platform.machine() == "ARM64":
-            generator_variant = [ "-A", "ARM64",
-                # Emulated cmake requires following flags to correctly detect
-                # target architecture for windows/arm64 build
-                "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
-                "-DCMAKE_SYSTEM_PROCESSOR=ARM64"]
-        elif is64:
-            generator_variant = ["-DCMAKE_GENERATOR_PLATFORM=x64"]
-        else:
-            generator_variant = ["-DCMAKE_GENERATOR_PLATFORM=Win32"]
-
-    print("Generator variant: ", generator_variant)
-
-    ci_cmake_generator = ci_cmake_generator + generator_variant
 
     cmake_args = (
         (ci_cmake_generator if is_CI_build else [])
@@ -208,6 +182,18 @@ def main():
             "-DBUILD_OPENEXR=ON",
         ]
         + (
+            # CMake flags for windows/arm64 build
+            ["-DCMAKE_GENERATOR_PLATFORM=ARM64",
+             # Emulated cmake requires following flags to correctly detect
+             # target architecture for windows/arm64 build
+             "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
+             "-DCMAKE_SYSTEM_PROCESSOR=ARM64"]
+            if platform.machine() == "ARM64" and sys.platform == "win32"
+            # If it is not defined 'linker flags: /machine:X86' on Windows x64
+            else ["-DCMAKE_GENERATOR_PLATFORM=x64"] if is64 and sys.platform == "win32"
+            else []
+          )
+        + (
             ["-DOPENCV_EXTRA_MODULES_PATH=" + os.path.abspath("opencv_contrib/modules")]
             if build_contrib
             else []
@@ -219,10 +205,14 @@ def main():
         cmake_args.append("-DWITH_WIN32UI=OFF")
         cmake_args.append("-DWITH_QT=OFF")
         cmake_args.append("-DWITH_GTK=OFF")
-        if is_CI_build:
-            cmake_args.append(
-                "-DWITH_MSMF=OFF"
-            )  # see: https://github.com/skvark/opencv-python/issues/263
+        # see: https://github.com/skvark/opencv-python/issues/263
+        # see: https://github.com/opencv/opencv-python/issues/771
+        cmake_args.append("-DWITH_MSMF=OFF")
+        cmake_args.append("-DWITH_OBSENSOR=OFF") # Orbbec cameras backend uses MSMF API
+        # see: https://github.com/opencv/opencv/issues/28438
+        # libavdevice is enabled by default, but brings libxcb dependency
+        if sys.platform.startswith("linux"):
+            cmake_args.append("-DOPENCV_FFMPEG_ENABLE_LIBAVDEVICE=OFF")
 
     if sys.platform.startswith("linux") and not is64 and "bdist_wheel" in sys.argv:
         subprocess.check_call("patch -p0 < patches/patchOpenEXR", shell=True)
@@ -283,7 +273,7 @@ def main():
         install_requires=install_requires,
         python_requires=">=3.6",
         classifiers=[
-            "Development Status :: 5 - Alpha",
+            "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",
             "Intended Audience :: Education",
@@ -304,6 +294,8 @@ def main():
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: 3.12",
+            "Programming Language :: Python :: 3.13",
+            "Programming Language :: Python :: 3.14",
             "Programming Language :: C++",
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering",
