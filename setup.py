@@ -140,6 +140,14 @@ def main():
         ],
     }
 
+    if build_contrib:
+        rearrange_cmake_output_data["cv2.data"] = [  # OPENCV_OTHER_INSTALL_PATH
+            ("etc" if os.name == "nt" else "share/opencv5") + r"/haarcascades/.*\.xml"
+        ]
+        rearrange_cmake_output_data["cv2.gapi"] = [
+            "python/cv2" + r"/gapi/.*\.py"
+        ]
+
     if sys.version_info >= (3, 6):
         rearrange_cmake_output_data["cv2.typing"] = ["python/cv2" + r"/typing/.*\.py"]
 
