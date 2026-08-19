@@ -33,16 +33,16 @@ jobs:
         include:
           - platform: aarch64
             manylinux: 2014
-            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux2014-aarch64:20260531
+            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux2014-aarch64:20260725
           - platform: x86_64
             manylinux: 2014
-            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux2014-x86-64:20260531
+            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux2014-x86-64:20260725
           - platform: x86_64
             manylinux: 2_28
-            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux_2_28-x86-64:20260531
+            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux_2_28-x86-64:20260725
           - platform: aarch64
             manylinux: 2_28
-            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux_2_28-aarch64:20260531
+            DOCKER_IMAGE: quay.io/opencv-ci/opencv-python-manylinux_2_28-aarch64:20260725
 
     env:
       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
@@ -272,16 +272,16 @@ jobs:
       - name: Upload wheels for opencv_python
         run: |
           python -m pip install twine
-          python -m twine upload -u ${{ secrets.OPENCV_PYTHON_USERNAME }} -p ${{ secrets.OPENCV_PYTHON_PASSWORD }} --skip-existing wheelhouse/wheel-*/opencv_python-* wheelhouse/wheel-*/opencv-python-[^h]*
+          python -m twine upload -u ${{ secrets.OPENCV_PYTHON_USERNAME }} -p ${{ secrets.OPENCV_PYTHON_PASSWORD }} --skip-existing wheelhouse/opencv_python-* wheelhouse/opencv-python-[^h]*
       - name: Upload wheels for opencv_contrib_python
         run: |
           python -m pip install twine
-          python -m twine upload -u ${{ secrets.OPENCV_CONTRIB_PYTHON_USERNAME }} -p ${{ secrets.OPENCV_CONTRIB_PYTHON_PASSWORD }} --skip-existing wheelhouse/wheel-*/opencv_contrib_python-* wheelhouse/wheel-*/opencv-contrib-python-[^h]*
+          python -m twine upload -u ${{ secrets.OPENCV_CONTRIB_PYTHON_USERNAME }} -p ${{ secrets.OPENCV_CONTRIB_PYTHON_PASSWORD }} --skip-existing wheelhouse/opencv_contrib_python-* wheelhouse/opencv-contrib-python-[^h]*
       - name: Upload wheels for opencv_python_headless
         run: |
           python -m pip install twine
-          python -m twine upload -u ${{ secrets.OPENCV_PYTHON_HEADLESS_USERNAME }} -p ${{ secrets.OPENCV_PYTHON_HEADLESS_PASSWORD }} --skip-existing wheelhouse/wheel-*/opencv_python_headless-* wheelhouse/wheel-*/opencv-python-headless-*
+          python -m twine upload -u ${{ secrets.OPENCV_PYTHON_HEADLESS_USERNAME }} -p ${{ secrets.OPENCV_PYTHON_HEADLESS_PASSWORD }} --skip-existing wheelhouse/opencv_python_headless-* wheelhouse/opencv-python-headless-*
       - name: Upload wheels for opencv_contrib_python_headless
         run: |
           python -m pip install twine
-          python -m twine upload -u ${{ secrets.OPENCV_CONTRIB_PYTHON_HEADLESS_USERNAME }} -p ${{ secrets.OPENCV_CONTRIB_PYTHON_HEADLESS_PASSWORD }} --skip-existing wheelhouse/wheel-*/opencv_contrib_python_headless-* wheelhouse/wheel-*/opencv-contrib-python-headless-*
+          python -m twine upload -u ${{ secrets.OPENCV_CONTRIB_PYTHON_HEADLESS_USERNAME }} -p ${{ secrets.OPENCV_CONTRIB_PYTHON_HEADLESS_PASSWORD }} --skip-existing wheelhouse/opencv_contrib_python_headless-* wheelhouse/opencv-contrib-python-headless-*
