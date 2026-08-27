@@ -157,8 +157,9 @@ def main():
 
     # HACK: Disabled generic assembler for now.
     # Windows 2025 CI environment does not provide suitable assembler or build is broken in OpenCV MLAS.
+    cmake_generator = os.environ.get("CMAKE_GENERATOR", "Visual Studio 17 2022")
     ci_cmake_generator = (
-        ["-G", os.environ.get("CMAKE_GENERATOR", "Visual Studio 17 2022"),
+        ["-G", cmake_generator,
          "-DCMAKE_ASM_COMPILER="]
         if os.name == "nt"
         else ["-G", "Unix Makefiles"]
@@ -194,14 +195,18 @@ def main():
         ]
         + (
             # CMake flags for windows/arm64 build
-            ["-DCMAKE_GENERATOR_PLATFORM=ARM64",
+            [
              # Emulated cmake requires following flags to correctly detect
              # target architecture for windows/arm64 build
              "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
              "-DCMAKE_SYSTEM_PROCESSOR=ARM64"]
+            # CMAKE_GENERATOR_PLATFORM is only supported by the Visual Studio
+            # generator; with Ninja the target arch comes from the MSVC
+            # environment selected by scikit-build
+            + (["-DCMAKE_GENERATOR_PLATFORM=ARM64"] if "Visual Studio" in cmake_generator else [])
             if platform.machine() == "ARM64" and sys.platform == "win32"
             # If it is not defined 'linker flags: /machine:X86' on Windows x64
-            else ["-DCMAKE_GENERATOR_PLATFORM=x64"] if is64 and sys.platform == "win32"
+            else ["-DCMAKE_GENERATOR_PLATFORM=x64"] if is64 and sys.platform == "win32" and "Visual Studio" in cmake_generator
             else []
           )
         + (
