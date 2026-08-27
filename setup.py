@@ -103,8 +103,11 @@ def main():
     # Path regexes with forward slashes relative to CMake install dir.
     rearrange_cmake_output_data = {
         "cv2": (
+            # OpenCV does not provide a prebuilt FFmpeg for Windows ARM64
+            # (see NOT ARM AND NOT AARCH64 in opencv's
+            # modules/videoio/cmake/detect_ffmpeg.cmake)
             [r"bin/opencv_videoio_ffmpeg\d{3}%s\.dll" % ("_64" if is64 else "")]
-            if os.name == "nt"
+            if os.name == "nt" and not (sys.platform == "win32" and platform.machine() == "ARM64")
             else []
         )
         +
