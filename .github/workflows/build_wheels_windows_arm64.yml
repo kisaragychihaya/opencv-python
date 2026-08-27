@@ -53,19 +53,23 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         architecture: arm64
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1.1
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: arm64
     - name: Setup NASM
       uses: ilammy/setup-nasm@v1
     - name: Build a package
-      # CMake 3.25 regression fix. See https://stackoverflow.com/questions/74162633/problem-compiling-from-source-opencv-with-mvsc2019-in-64-bit-version
+      # cmake>=3.27 provides win_arm64 wheels on PyPI; ninja is faster than MSBuild.
+      # CMAKE_GENERATOR=Ninja makes CMake pick the first compiler on PATH, so MSVC
+      # must be initialized first (see the "Setup MSVC" step above).
       run: |
         python --version
         python -m pip install --upgrade pip
         python -m pip install --upgrade setuptools
-        python -m pip install cmake==3.24.2
+        python -m pip install cmake==3.31.6 ninja
         python -m pip install toml && python -c "import toml; c = toml.load('pyproject.toml'); print('\n'.join(c['build-system']['requires']))" >> requirements.txt | python -m pip install -r requirements.txt
-        set "CI_BUILD=1" && python setup.py bdist_wheel --py-limited-api=cp37 --dist-dir=%cd%\wheelhouse -v
+        set "CI_BUILD=1" && set "CMAKE_GENERATOR=Ninja" && python setup.py bdist_wheel --py-limited-api=cp37 --dist-dir=%cd%\wheelhouse -v
       shell: cmd
     - name: Saving all wheels
       uses: actions/upload-artifact@v7
