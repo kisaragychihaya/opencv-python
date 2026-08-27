@@ -158,7 +158,7 @@ def main():
     # HACK: Disabled generic assembler for now.
     # Windows 2025 CI environment does not provide suitable assembler or build is broken in OpenCV MLAS.
     ci_cmake_generator = (
-        ["-G", "Visual Studio 17 2022",
+        ["-G", os.environ.get("CMAKE_GENERATOR", "Visual Studio 17 2022"),
          "-DCMAKE_ASM_COMPILER="]
         if os.name == "nt"
         else ["-G", "Unix Makefiles"]
